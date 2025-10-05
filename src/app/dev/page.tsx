@@ -8,7 +8,7 @@ import Image from "next/image";
 
 const team = [
 	{
-		name: "Shrman Chaudhuri",
+		name: "Shraman Chaudhuri",
 		role: "Team Lead",
 		desc: "Oversees testing to ensure smooth, bug-free functionality.",
 		img: "/team/shraman.jpeg",
