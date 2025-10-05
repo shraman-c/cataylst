@@ -1,0 +1,748 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
+
+/**
+ * Supabase configuration
+ */
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL) {
+  throw new Error('SUPABASE_URL is not defined in the environment');
+}
+
+if (!SUPABASE_ANON_KEY) {
+  throw new Error('SUPABASE_ANON_KEY is not defined in the environment');
+}
+
+// In dev we cache the client on the global object to prevent creating many connections on hot reload
+declare global {
+  // eslint-disable-next-line no-var
+  var __SUPABASE_CLIENT: SupabaseClient | undefined;
+  // eslint-disable-next-line no-var
+  var __SUPABASE_ADMIN_CLIENT: SupabaseClient | undefined;
+}
+
+/**
+ * Creates a Supabase client with anon key (for client-side operations)
+ */
+function createAnonClient(): SupabaseClient {
+  return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+    auth: {
+      persistSession: false, // For server-side usage
+    },
+  });
+}
+
+/**
+ * Creates a Supabase client with service role key (for admin operations)
+ */
+function createAdminClient(): SupabaseClient {
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for admin operations');
+  }
+  
+  return createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+/**
+ * Get Supabase client (anon key) - for general database operations
+ * This maintains the same interface as the MongoDB connection
+ */
+export function getSupabaseClient(): SupabaseClient {
+  if (!global.__SUPABASE_CLIENT) {
+    global.__SUPABASE_CLIENT = createAnonClient();
+  }
+  return global.__SUPABASE_CLIENT;
+}
+
+/**
+ * Get Supabase admin client (service role key) - for admin operations
+ */
+export function getSupabaseAdminClient(): SupabaseClient {
+  if (!global.__SUPABASE_ADMIN_CLIENT) {
+    global.__SUPABASE_ADMIN_CLIENT = createAdminClient();
+  }
+  return global.__SUPABASE_ADMIN_CLIENT;
+}
+
+/**
+ * Main connection function for database operations
+ * Returns the Supabase client for database operations
+ */
+export async function connectToDatabase(): Promise<{ client: SupabaseClient; db: SupabaseClient }> {
+  const client = getSupabaseClient();
+  
+  // Test the connection
+  try {
+    const { error } = await client.from('students').select('count', { count: 'exact', head: true });
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "table not found" which is ok during setup
+      console.error('[Supabase] Connection test failed:', error);
+      throw new Error('Failed to connect to Supabase: ' + error.message);
+    }
+    console.log('[Supabase] Connected to', SUPABASE_URL);
+  } catch (err) {
+    console.error('[Supabase] Connection failed:', err);
+    throw err;
+  }
+
+  // Return client as both client and db for database operations
+  return { client, db: client };
+}
+
+/**
+ * Database collection helpers for CRUD operations
+ * Provides structured access to all application tables
+ */
+export function collections() {
+  const client = getSupabaseClient();
+  
+  return {
+    students: {
+      find: () => client.from('students').select('*'),
+      findOne: (filter: any) => client.from('students').select('*').eq('custom_id', filter.id).single(),
+      insertOne: (doc: any) => client.from('students').insert({
+        custom_id: doc.id,
+        name: doc.name,
+        student_id: doc.studentId,
+        electives: doc.electives,
+        credits: doc.credits,
+        program_id: doc.programId,
+        current_semester: doc.currentSemester,
+        section_id: doc.sectionId
+      }),
+      insertMany: (docs: any[]) => client.from('students').insert(
+        docs.map(doc => ({
+          custom_id: doc.id,
+          name: doc.name,
+          student_id: doc.studentId,
+          electives: doc.electives,
+          credits: doc.credits,
+          program_id: doc.programId,
+          current_semester: doc.currentSemester,
+          section_id: doc.sectionId
+        }))
+      ),
+      updateOne: (filter: any, update: any) => client.from('students')
+        .update({
+          name: update.$set?.name,
+          student_id: update.$set?.studentId,
+          electives: update.$set?.electives,
+          credits: update.$set?.credits,
+          program_id: update.$set?.programId,
+          current_semester: update.$set?.currentSemester,
+          section_id: update.$set?.sectionId
+        })
+        .eq('custom_id', filter.id),
+      deleteMany: () => client.from('students').delete().neq('id', '00000000-0000-0000-0000-000000000000'), // Delete all
+      replaceOne: (filter: any, doc: any) => client.from('students')
+        .upsert({
+          custom_id: doc.id,
+          name: doc.name,
+          student_id: doc.studentId,
+          electives: doc.electives,
+          credits: doc.credits,
+          program_id: doc.programId,
+          current_semester: doc.currentSemester,
+          section_id: doc.sectionId
+        }, { onConflict: 'custom_id' })
+    },
+    teachers: {
+      find: () => client.from('teachers').select('*'),
+      findOne: (filter: any) => client.from('teachers').select('*').eq('custom_id', filter.id).single(),
+      insertOne: (doc: any) => client.from('teachers').insert({
+        custom_id: doc.id,
+        name: doc.name,
+        teacher_id: doc.teacherId,
+        subjects: doc.subjects,
+        availability: doc.availability,
+        designation: doc.designation,
+        qualification: doc.qualification,
+        working_hours: doc.workingHours,
+        department: doc.department,
+        departmental_role: doc.departmentalRole,
+        departmental_permissions: doc.departmentalPermissions
+      }),
+      insertMany: (docs: any[]) => client.from('teachers').insert(
+        docs.map(doc => ({
+          custom_id: doc.id,
+          name: doc.name,
+          teacher_id: doc.teacherId,
+          subjects: doc.subjects,
+          availability: doc.availability,
+          designation: doc.designation,
+          qualification: doc.qualification,
+          working_hours: doc.workingHours,
+          department: doc.department,
+          departmental_role: doc.departmentalRole,
+          departmental_permissions: doc.departmentalPermissions
+        }))
+      ),
+      updateOne: (filter: any, update: any) => client.from('teachers')
+        .update({
+          name: update.$set?.name,
+          teacher_id: update.$set?.teacherId,
+          subjects: update.$set?.subjects,
+          availability: update.$set?.availability,
+          designation: update.$set?.designation,
+          qualification: update.$set?.qualification,
+          working_hours: update.$set?.workingHours,
+          department: update.$set?.department,
+          departmental_role: update.$set?.departmentalRole,
+          departmental_permissions: update.$set?.departmentalPermissions
+        })
+        .eq('custom_id', filter.id),
+      deleteMany: () => client.from('teachers').delete().neq('id', '00000000-0000-0000-0000-000000000000'), // Delete all
+      replaceOne: (filter: any, doc: any) => client.from('teachers')
+        .upsert({
+          custom_id: doc.id,
+          name: doc.name,
+          teacher_id: doc.teacherId,
+          subjects: doc.subjects,
+          availability: doc.availability,
+          designation: doc.designation,
+          qualification: doc.qualification,
+          working_hours: doc.workingHours,
+          department: doc.department,
+          departmental_role: doc.departmentalRole,
+          departmental_permissions: doc.departmentalPermissions
+        }, { onConflict: 'custom_id' })
+    },
+    programs: {
+      find: () => client.from('programs').select('*'),
+      findOne: (filter: any) => client.from('programs').select('*').eq('custom_id', filter.id).single(),
+      // Ensure custom_id is always provided (fallbacks: id, custom_id, code, generated UUID)
+      insertOne: (doc: any) => client.from('programs').insert({
+        custom_id: doc.id ?? doc.custom_id ?? doc.code ?? randomUUID(),
+        name: doc.name,
+        code: doc.code,
+        total_semesters: doc.totalSemesters,
+        description: doc.description,
+        is_nep: doc.isNEP || false
+      }),
+      insertMany: (docs: any[]) => client.from('programs').insert(
+        docs.map(doc => ({
+          custom_id: doc.id ?? doc.custom_id ?? doc.code ?? randomUUID(),
+          name: doc.name,
+          code: doc.code,
+          total_semesters: doc.totalSemesters,
+          description: doc.description,
+          is_nep: doc.isNEP || false
+        }))
+      ),
+      updateOne: (filter: any, update: any) => client.from('programs')
+        .update({
+          name: update.$set?.name,
+          code: update.$set?.code,
+          total_semesters: update.$set?.totalSemesters,
+          description: update.$set?.description,
+          is_nep: update.$set?.isNEP
+        })
+        .eq('custom_id', filter.id),
+      deleteMany: () => client.from('programs').delete().neq('id', '00000000-0000-0000-0000-000000000000'), // Delete all
+      replaceOne: (filter: any, doc: any) => client.from('programs')
+        .upsert({
+          custom_id: doc.id,
+          name: doc.name,
+          code: doc.code,
+          total_semesters: doc.totalSemesters,
+          description: doc.description,
+          is_nep: doc.isNEP || false
+        }, { onConflict: 'custom_id' })
+    },
+    courses: {
+      find: () => client.from('courses').select('*'),
+      findOne: (filter: any) => client.from('courses').select('*').eq('id', filter.id).single(),
+      insertOne: (doc: any) => client.from('courses').insert({
+        id: doc.id, // course code is the unique key
+        name: doc.name,
+        credits: doc.credits,
+        classes_per_week: doc.classesPerWeek,
+        is_lab: doc.isLab,
+        semester: doc.semester,
+        program_id: doc.programId,
+        is_elective: doc.isElective ?? false,
+        prerequisite_courses: doc.prerequisiteCourses ?? [],
+        is_nep: doc.isNEP ?? false,
+        nep_course_type: doc.nepCourseType ?? null,
+        department: doc.department ?? null
+      }),
+      insertMany: (docs: any[]) => client.from('courses').upsert(
+        docs.map(doc => ({
+          custom_id: doc.id, // course code goes to custom_id
+          name: doc.name,
+          credits: doc.credits,
+          classes_per_week: doc.classesPerWeek,
+          is_lab: doc.isLab,
+          semester: doc.semester,
+          program_id: doc.programId,
+          // is_elective field doesn't exist in schema, removing it
+          // prerequisite_courses field doesn't exist in schema, removing it  
+          is_nep: doc.isNEP ?? false,
+          nep_course_type: doc.nepCourseType ?? null,
+          department: doc.department ?? null
+        })),
+        { onConflict: 'custom_id' } // Use custom_id for conflict resolution
+      ),
+      updateOne: (filter: any, update: any) => client.from('courses')
+        .update({
+          name: update.$set?.name,
+          credits: update.$set?.credits,
+          classes_per_week: update.$set?.classesPerWeek,
+          is_lab: update.$set?.isLab
+        })
+        .eq('custom_id', filter.id),
+      deleteMany: () => client.from('courses').delete().neq('id', '00000000-0000-0000-0000-000000000000'), // Delete all
+      replaceOne: (filter: any, doc: any) => client.from('courses')
+        .upsert({
+          custom_id: doc.id,
+          name: doc.name,
+          credits: doc.credits,
+          classes_per_week: doc.classesPerWeek,
+          is_lab: doc.isLab
+        }, { onConflict: 'custom_id' })
+    },
+    rooms: {
+      find: () => client.from('rooms').select('*'),
+      findOne: (filter: any) => client.from('rooms').select('*').eq('custom_id', filter.id).single(),
+      insertOne: (doc: any) => client.from('rooms').insert({
+        custom_id: doc.id,
+        name: doc.name,
+        capacity: doc.capacity,
+        is_lab: doc.isLab
+      }),
+      insertMany: (docs: any[]) => client.from('rooms').insert(
+        docs.map(doc => ({
+          custom_id: doc.id,
+          name: doc.name,
+          capacity: doc.capacity,
+          is_lab: doc.isLab
+        }))
+      ),
+      updateOne: (filter: any, update: any) => client.from('rooms')
+        .update({
+          name: update.$set?.name,
+          capacity: update.$set?.capacity,
+          is_lab: update.$set?.isLab
+        })
+        .eq('custom_id', filter.id),
+      deleteMany: () => client.from('rooms').delete().neq('id', '00000000-0000-000000000000'), // Delete all
+      replaceOne: (filter: any, doc: any) => client.from('rooms')
+        .upsert({
+          custom_id: doc.id,
+          name: doc.name,
+          capacity: doc.capacity,
+          is_lab: doc.isLab
+        }, { onConflict: 'custom_id' })
+    },
+    sections: {
+      find: () => client.from('students_sections').select('*'),
+      findOne: (filter: any) => client.from('students_sections').select('*').eq('custom_id', filter.id).single(),
+      insertOne: (doc: any) => client.from('students_sections').insert({
+        id: doc.id, // uuid for PK
+        custom_id: doc.custom_id, // user-supplied section id (as entered)
+        name: doc.name,
+        programid: doc.programId, // match DB column name
+        semester: doc.semester,
+        capacity: doc.capacity,
+        current_enrollment: doc.currentEnrollment || 0,
+        room_preference: doc.roomPreference,
+        shift: doc.shift,
+        is_active: doc.isActive !== false
+      }),
+      insertMany: (docs: any[]) => client.from('students_sections').insert(
+        docs.map(doc => ({
+          custom_id: doc.id,
+          name: doc.name,
+          program_id: doc.programId,
+          semester: doc.semester,
+          capacity: doc.capacity,
+          current_enrollment: doc.currentEnrollment || 0,
+          room_preference: doc.roomPreference,
+          shift: doc.shift,
+          is_active: doc.isActive !== false
+        }))
+      ),
+      updateOne: (filter: any, update: any) => client.from('students_sections')
+        .update({
+          name: update.$set?.name,
+          program_id: update.$set?.programId,
+          semester: update.$set?.semester,
+          capacity: update.$set?.capacity,
+          current_enrollment: update.$set?.currentEnrollment,
+          room_preference: update.$set?.roomPreference,
+          shift: update.$set?.shift,
+          is_active: update.$set?.isActive
+        })
+        .eq('custom_id', filter.id),
+      deleteMany: () => client.from('students_sections').delete().neq('id', '00000000-0000-0000-0000-000000000000'), // Delete all
+      replaceOne: (filter: any, doc: any) => client.from('students_sections')
+        .upsert({
+          custom_id: doc.id,
+          name: doc.name,
+          program_id: doc.programId,
+          semester: doc.semester,
+          capacity: doc.capacity,
+          current_enrollment: doc.currentEnrollment || 0,
+          room_preference: doc.roomPreference,
+          shift: doc.shift,
+          is_active: doc.isActive !== false
+        }, { onConflict: 'custom_id' })
+    },
+    timetables: {
+      find: () => client.from('timetables').select('*'),
+      findOne: (filter: any) => client.from('timetables').select('*').eq('custom_id', filter.id).single(),
+      insertOne: (doc: any) => client.from('timetables').insert({
+        custom_id: doc.id,
+        day: doc.day,
+        time_start: doc.timeStart,
+        time_end: doc.timeEnd,
+        course_id: doc.courseId,
+        teacher_id: doc.teacherId,
+        room_id: doc.roomId
+      }),
+      insertMany: (docs: any[]) => client.from('timetables').insert(
+        docs.map(doc => ({
+          custom_id: doc.id,
+          day: doc.day,
+          time_start: doc.timeStart,
+          time_end: doc.timeEnd,
+          course_id: doc.courseId,
+          teacher_id: doc.teacherId,
+          room_id: doc.roomId
+        }))
+      ),
+      updateOne: (filter: any, update: any) => client.from('timetables')
+        .update({
+          day: update.$set?.day,
+          time_start: update.$set?.timeStart,
+          time_end: update.$set?.timeEnd,
+          course_id: update.$set?.courseId,
+          teacher_id: update.$set?.teacherId,
+          room_id: update.$set?.roomId
+        })
+        .eq('custom_id', filter.id),
+      deleteMany: () => client.from('timetables').delete().neq('id', '00000000-0000-0000-0000-000000000000'), // Delete all
+      replaceOne: (filter: any, doc: any) => client.from('timetables')
+        .upsert({
+          custom_id: doc.id,
+          day: doc.day,
+          time_start: doc.timeStart,
+          time_end: doc.timeEnd,
+          course_id: doc.courseId,
+          teacher_id: doc.teacherId,
+          room_id: doc.roomId
+        }, { onConflict: 'custom_id' })
+    },
+    changeRequests: {
+      find: () => client.from('change_requests').select('*'),
+      findOne: (filter: any) => client.from('change_requests').select('*').eq('custom_id', filter._id).single(),
+      insertOne: (doc: any) => client.from('change_requests').insert({
+        custom_id: doc._id,
+        requester_id: doc.requesterId,
+        requester_name: doc.requesterName,
+        slot_id: doc.slotId,
+        request_details: doc.requestDetails,
+        status: doc.status
+      }),
+      insertMany: (docs: any[]) => client.from('change_requests').insert(
+        docs.map(doc => ({
+          custom_id: doc._id,
+          requester_id: doc.requesterId,
+          requester_name: doc.requesterName,
+          slot_id: doc.slotId,
+          request_details: doc.requestDetails,
+          status: doc.status
+        }))
+      ),
+      updateOne: (filter: any, update: any) => client.from('change_requests')
+        .update({
+          requester_id: update.$set?.requesterId,
+          requester_name: update.$set?.requesterName,
+          slot_id: update.$set?.slotId,
+          request_details: update.$set?.requestDetails,
+          status: update.$set?.status
+        })
+        .eq('custom_id', filter._id),
+      deleteMany: () => client.from('change_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000'), // Delete all
+      replaceOne: (filter: any, doc: any) => client.from('change_requests')
+        .upsert({
+          custom_id: doc._id,
+          requester_id: doc.requesterId,
+          requester_name: doc.requesterName,
+          slot_id: doc.slotId,
+          request_details: doc.requestDetails,
+          status: doc.status
+        }, { onConflict: 'custom_id' })
+    },
+    departments: {
+      find: () => client.from('departments').select('*'),
+      findOne: (filter: any) => client.from('departments').select('*').eq('code', filter.code).single(),
+      insertOne: (doc: any) => client.from('departments').insert({
+        code: doc.code,
+        name: doc.name,
+        description: doc.description,
+        head_of_department: doc.headOfDepartment,
+        contact_email: doc.contactEmail,
+        contact_phone: doc.contactPhone,
+        building: doc.building,
+        floor: doc.floor,
+        room_numbers: doc.roomNumbers,
+        established_year: doc.establishedYear
+      }),
+      insertMany: (docs: any[]) => client.from('departments').insert(
+        docs.map(doc => ({
+          code: doc.code,
+          name: doc.name,
+          description: doc.description,
+          head_of_department: doc.headOfDepartment,
+          contact_email: doc.contactEmail,
+          contact_phone: doc.contactPhone,
+          building: doc.building,
+          floor: doc.floor,
+          room_numbers: doc.roomNumbers,
+          established_year: doc.establishedYear
+        }))
+      ),
+      updateOne: (filter: any, update: any) => client.from('departments')
+        .update({
+          name: update.$set?.name,
+          description: update.$set?.description,
+          head_of_department: update.$set?.headOfDepartment,
+          contact_email: update.$set?.contactEmail,
+          contact_phone: update.$set?.contactPhone,
+          building: update.$set?.building,
+          floor: update.$set?.floor,
+          room_numbers: update.$set?.roomNumbers,
+          established_year: update.$set?.establishedYear
+        })
+        .eq('code', filter.code),
+      deleteMany: () => client.from('departments').delete().neq('code', 'General'), // Keep General department
+      replaceOne: (filter: any, doc: any) => client.from('departments')
+        .upsert({
+          code: doc.code,
+          name: doc.name,
+          description: doc.description,
+          head_of_department: doc.headOfDepartment,
+          contact_email: doc.contactEmail,
+          contact_phone: doc.contactPhone,
+          building: doc.building,
+          floor: doc.floor,
+          room_numbers: doc.roomNumbers,
+          established_year: doc.establishedYear
+        }, { onConflict: 'code' })
+    },
+    labs: {
+      find: () => client.from('labs').select('*'),
+      findOne: (filter: any) => client.from('labs').select('*').eq('custom_id', filter.id).single(),
+      insertOne: (doc: any) => client.from('labs').insert({
+        custom_id: doc.id,
+        name: doc.name,
+        department_code: doc.departmentCode,
+        room_number: doc.roomNumber,
+        capacity: doc.capacity,
+        equipment: doc.equipment,
+        lab_type: doc.labType,
+        lab_incharge: doc.labIncharge,
+        maintenance_schedule: doc.maintenanceSchedule,
+        safety_protocols: doc.safetyProtocols,
+        operating_hours: doc.operatingHours,
+        is_active: doc.isActive
+      }),
+      insertMany: (docs: any[]) => client.from('labs').insert(
+        docs.map(doc => ({
+          custom_id: doc.id,
+          name: doc.name,
+          department_code: doc.departmentCode,
+          room_number: doc.roomNumber,
+          capacity: doc.capacity,
+          equipment: doc.equipment,
+          lab_type: doc.labType,
+          lab_incharge: doc.labIncharge,
+          maintenance_schedule: doc.maintenanceSchedule,
+          safety_protocols: doc.safetyProtocols,
+          operating_hours: doc.operatingHours,
+          is_active: doc.isActive
+        }))
+      ),
+      updateOne: (filter: any, update: any) => client.from('labs')
+        .update({
+          name: update.$set?.name,
+          department_code: update.$set?.departmentCode,
+          room_number: update.$set?.roomNumber,
+          capacity: update.$set?.capacity,
+          equipment: update.$set?.equipment,
+          lab_type: update.$set?.labType,
+          lab_incharge: update.$set?.labIncharge,
+          maintenance_schedule: update.$set?.maintenanceSchedule,
+          safety_protocols: update.$set?.safetyProtocols,
+          operating_hours: update.$set?.operatingHours,
+          is_active: update.$set?.isActive
+        })
+        .eq('custom_id', filter.id),
+      deleteMany: () => client.from('labs').delete().neq('id', '00000000-0000-0000-0000-000000000000'), // Delete all
+      replaceOne: (filter: any, doc: any) => client.from('labs')
+        .upsert({
+          custom_id: doc.id,
+          name: doc.name,
+          department_code: doc.departmentCode,
+          room_number: doc.roomNumber,
+          capacity: doc.capacity,
+          equipment: doc.equipment,
+          lab_type: doc.labType,
+          lab_incharge: doc.labIncharge,
+          maintenance_schedule: doc.maintenanceSchedule,
+          safety_protocols: doc.safetyProtocols,
+          operating_hours: doc.operatingHours,
+          is_active: doc.isActive
+        }, { onConflict: 'custom_id' })
+    }
+  } as const;
+}
+
+/**
+ * Helper function to convert Supabase rows to application format
+ */
+export function convertSupabaseToMongo(rows: any[], type: string): any[] {
+  return rows.map(row => {
+    switch (type) {
+      case 'students':
+        return {
+          id: row.custom_id,
+          name: row.name,
+          studentId: row.student_id,
+          electives: row.electives,
+          credits: row.credits,
+          programId: row.program_id,
+          currentSemester: row.current_semester,
+          sectionId: row.section_id
+        };
+      case 'teachers':
+        return {
+          id: row.custom_id,
+          name: row.name,
+          teacherId: row.teacher_id,
+          subjects: row.subjects,
+          availability: row.availability,
+          designation: row.designation,
+          qualification: row.qualification,
+          workingHours: row.working_hours,
+          department: row.department,
+          departmentalRole: row.departmental_role,
+          departmentalPermissions: row.departmental_permissions
+        };
+      case 'programs':
+        return {
+          id: row.custom_id,
+          name: row.name,
+          code: row.code,
+          totalSemesters: row.total_semesters,
+          description: row.description,
+          isNEP: row.is_nep || false
+        };
+      case 'courses':
+        return {
+          id: row.id, // Use course code as id
+          name: row.name,
+          credits: row.credits,
+          classesPerWeek: row.classes_per_week,
+          isLab: row.is_lab,
+          semester: row.semester,
+          programId: row.program_id,
+          isElective: row.is_elective,
+          prerequisiteCourses: row.prerequisite_courses || [],
+          isNEP: row.is_nep,
+          nepCourseType: row.nep_course_type,
+          department: row.department
+        };
+      case 'rooms':
+        return {
+          id: row.custom_id,
+          name: row.name,
+          capacity: row.capacity,
+          isLab: row.is_lab
+        };
+      case 'sections':
+        return {
+          id: row.custom_id,
+          name: row.name,
+          programId: row.program_id,
+          semester: row.semester,
+          capacity: row.capacity,
+          currentEnrollment: row.current_enrollment,
+          roomPreference: row.room_preference,
+          shift: row.shift,
+          isActive: row.is_active
+        };
+      case 'timetables':
+        return {
+          id: row.custom_id,
+          day: row.day,
+          timeStart: row.time_start,
+          timeEnd: row.time_end,
+          courseId: row.course_id,
+          teacherId: row.teacher_id,
+          roomId: row.room_id
+        };
+      case 'changeRequests':
+        return {
+          _id: row.custom_id,
+          requesterId: row.requester_id,
+          requesterName: row.requester_name,
+          slotId: row.slot_id,
+          requestDetails: row.request_details,
+          status: row.status,
+          createdAt: new Date(row.created_at)
+        };
+      case 'departments':
+        return {
+          code: row.code,
+          name: row.name,
+          description: row.description,
+          headOfDepartment: row.head_of_department,
+          contactEmail: row.contact_email,
+          contactPhone: row.contact_phone,
+          building: row.building,
+          floor: row.floor,
+          roomNumbers: row.room_numbers,
+          establishedYear: row.established_year,
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at)
+        };
+      case 'labs':
+        return {
+          id: row.custom_id,
+          name: row.name,
+          departmentCode: row.department_code,
+          roomNumber: row.room_number,
+          capacity: row.capacity,
+          equipment: row.equipment,
+          labType: row.lab_type,
+          labIncharge: row.lab_incharge,
+          maintenanceSchedule: row.maintenance_schedule,
+          safetyProtocols: row.safety_protocols,
+          operatingHours: row.operating_hours,
+          isActive: row.is_active,
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at)
+        };
+      default:
+        return row;
+    }
+  });
+}
+
+/**
+ * Initialize database tables and ensure schema is ready
+ */
+export async function ensureDatabase() {
+  // This function can be used to create tables programmatically if needed
+  // For now, we'll assume the schema has been created via SQL
+  console.log('[Supabase] Database initialization complete');
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "code": "CSE",
+    "name": "Computer Science & Engineering",
+    "description": "Computer Science and Engineering Department",
+    "isActive": true
+  },
+  {
+    "code": "ECE",
+    "name": "Electronics & Communication Engineering",
+    "description": "Electronics and Communication Engineering Department",
+    "isActive": true
+  },
+  {
+    "code": "EEE",
+    "name": "Electrical & Electronics Engineering",
+    "description": "Electrical and Electronics Engineering Department",
+    "isActive": true
+  },
+  {
+    "code": "MECH",
+    "name": "Mechanical Engineering",
+    "description": "Mechanical Engineering Department",
+    "isActive": true
+  },
+  {
+    "code": "CIVIL",
+    "name": "Civil Engineering",
+    "description": "Civil Engineering Department",
+    "isActive": true
+  },
+  {
+    "code": "MATH",
+    "name": "Mathematics",
+    "description": "Mathematics Department",
+    "isActive": true
+  },
+  {
+    "code": "PHY",
+    "name": "Physics",
+    "description": "Physics Department",
+    "isActive": true
+  },
+  {
+    "code": "CHEM",
+    "name": "Chemistry",
+    "description": "Chemistry Department",
+    "isActive": true
+  },
+  {
+    "code": "ENG",
+    "name": "English",
+    "description": "English Department",
+    "isActive": true
+  },
+  {
+    "code": "MGMT",
+    "name": "Management",
+    "description": "Management Department",
+    "isActive": true
+  },
+  {
+    "code": "GEN",
+    "name": "General",
+    "description": "General Department for interdisciplinary courses",
+    "isActive": true
+  },
+  {
+    "code": "BIO",
+    "name": "Department of Life Sciences",
+    "description": "Department of Life Sciences",
+    "isActive": true
+  }
+]

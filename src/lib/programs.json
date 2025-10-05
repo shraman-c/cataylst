@@ -1,0 +1,50 @@
+[
+  {
+    "id": "BTCSE25",
+    "name": "B.Tech. in Computer Science & Engineering",
+    "code": "BTCSE25",
+    "totalSemesters": 8,
+    "description": "B.Tech. in Computer Science & Engineering - 2025 - 29",
+    "isNEP": false
+  },
+  {
+    "id": "BCA25",
+    "name": "Bachelor of Computer Applications - 2025",
+    "code": "BCA25",
+    "totalSemesters": 8,
+    "description": "Bachelor of Computer Applications - 2025",
+    "isNEP": true
+  },
+  {
+    "id": "BTME25",
+    "name": "B.Tech. in Mechanical Engineering 2025",
+    "code": "BTME25",
+    "totalSemesters": 8,
+    "description": "B.Tech. in Mechanical Engineering 2025",
+    "isNEP": false
+  },
+  {
+    "id": "BTCSE24",
+    "name": "B.Tech. in Computer Science & Engineering - 2024",
+    "code": "BTCSE24",
+    "totalSemesters": 8,
+    "description": "B.Tech. in Computer Science & Engineering - 2024",
+    "isNEP": false
+  },
+  {
+    "id": "BCA(GA)25",
+    "name": "Bachelor of Computer Applications (Gaming and Animation) - 2025",
+    "code": "BCA(GA)25",
+    "totalSemesters": 8,
+    "description": "Bachelor of Computer Applications (Gaming and Animation) - 2025",
+    "isNEP": true
+  },
+  {
+    "id": "BCA24",
+    "name": "Bachelor of Computer Applications - 2024",
+    "code": "BCA24",
+    "totalSemesters": 8,
+    "description": "Bachelor of Computer Applications - 2024",
+    "isNEP": true
+  }
+]

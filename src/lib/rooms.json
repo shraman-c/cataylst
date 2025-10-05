@@ -1,0 +1,182 @@
+[
+  {
+    "id": "R1",
+    "name": "Room 101",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R2",
+    "name": "Room 102",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R3",
+    "name": "Room 103",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R4",
+    "name": "Room 104",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R5",
+    "name": "Room 105",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R6",
+    "name": "Room 106",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R7",
+    "name": "Room 107",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R8",
+    "name": "Room 108",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R9",
+    "name": "Room 109",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R10",
+    "name": "Room 110",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R11",
+    "name": "Room 111",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R12",
+    "name": "Room 112",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R13",
+    "name": "Room 113",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R14",
+    "name": "Room 114",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R15",
+    "name": "Room 115",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R16",
+    "name": "Room 116",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R17",
+    "name": "Room 117",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R18",
+    "name": "Room 118",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R19",
+    "name": "Room 119",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R20",
+    "name": "Room 120",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R21",
+    "name": "Room 121",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R22",
+    "name": "Room 122",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R23",
+    "name": "Room 123",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R24",
+    "name": "Room 124",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R25",
+    "name": "Room 125",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R26",
+    "name": "Room 126",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R27",
+    "name": "Room 127",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R28",
+    "name": "Room 128",
+    "capacity": 100,
+    "isLab": false
+  },
+  {
+    "id": "R29",
+    "name": "Room 129",
+    "capacity": 100,
+    "isLab": true
+  },
+  {
+    "id": "R30",
+    "name": "Room 130",
+    "capacity": 100,
+    "isLab": true
+  }
+]

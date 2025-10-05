@@ -1,0 +1,38 @@
+[
+  {
+    "id": "TEST001",
+    "name": "Test Student 1",
+    "studentId": "TEST001",
+    "electives": [],
+    "credits": 0,
+    "programId": "BTCSE",
+    "currentSemester": 3,
+    "enrolledCourses": [],
+    "sectionId": "SEC001",
+    "department": "CSE"
+  },
+  {
+    "id": "TEST002",
+    "name": "Test Student 2",
+    "studentId": "TEST002",
+    "electives": [],
+    "credits": 0,
+    "programId": "BTCSE",
+    "currentSemester": 2,
+    "enrolledCourses": [],
+    "sectionId": "SEC001",
+    "department": "CSE"
+  },
+  {
+    "id": "TEST003",
+    "name": "Test Student 3",
+    "studentId": "TEST003",
+    "electives": [],
+    "credits": 0,
+    "programId": "BTECE",
+    "currentSemester": 4,
+    "enrolledCourses": [],
+    "sectionId": "SEC001",
+    "department": "ECE"
+  }
+]

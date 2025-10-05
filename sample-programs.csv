@@ -1,0 +1,5 @@
+id,name,code,totalSemesters,description,isNEP
+BTCSE_NEP,B.Tech Computer Science (NEP),BTCSE-NEP,8,Bachelor of Technology in Computer Science and Engineering under NEP 2020,true
+BTECE_NEP,B.Tech Electronics (NEP),BTECE-NEP,8,Bachelor of Technology in Electronics and Communication Engineering under NEP 2020,true
+BTMECH_OLD,B.Tech Mechanical (Traditional),BTMECH-OLD,8,Bachelor of Technology in Mechanical Engineering under traditional curriculum,false
+BTCSE_OLD,B.Tech Computer Science (Traditional),BTCSE-OLD,8,Bachelor of Technology in Computer Science and Engineering under traditional curriculum,false

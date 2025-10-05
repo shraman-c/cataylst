@@ -1,0 +1,44 @@
+[
+  {
+    "id": "S001",
+    "name": "Test S4",
+    "studentId": "AU/STU/99996",
+    "electives": [],
+    "credits": 0,
+    "programId": "PRG001",
+    "currentSemester": 1,
+    "enrolledCourses": [],
+    "department": "CSE"
+  },
+  {
+    "id": "S001",
+    "name": "student 123",
+    "studentId": "stu123",
+    "electives": [
+      "CSE11001",
+      "PHY11201",
+      "GEE11001",
+      "ENG11053",
+      "GEE11012",
+      "BIT11003",
+      "MEE11002",
+      "PHY12202"
+    ],
+    "credits": 17,
+    "programId": "BTCSE",
+    "currentSemester": 1,
+    "enrolledCourses": [],
+    "department": "CSE"
+  },
+  {
+    "id": "S002",
+    "name": "New Student X",
+    "studentId": "AU/STU/99997",
+    "electives": [],
+    "credits": 0,
+    "programId": "PRG001",
+    "currentSemester": 1,
+    "enrolledCourses": [],
+    "department": "CSE"
+  }
+]

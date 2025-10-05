@@ -1,0 +1,23 @@
+[
+  {
+    "id": "Hello",
+    "name": "Programming Lab",
+    "department": "General",
+    "credits": 3,
+    "classesPerWeek": 3,
+    "isLab": false,
+    "semester": 1,
+    "isNEP": true,
+    "nepCourseType": "Major"
+  },
+  {
+    "id": "Hello1",
+    "name": "Programming Lab2",
+    "department": "CSE",
+    "credits": 3,
+    "classesPerWeek": 3,
+    "isLab": true,
+    "semester": 1,
+    "isNEP": true
+  }
+]

@@ -1,0 +1,39 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Next.js plugin for Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# Netlify Functions configuration
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["src/**", "public/**"]
+
+# Redirect rules for Next.js
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
+  force = false
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Environment variables (also set these in Netlify UI for production)
+# [build.environment]
+# DATABASE_URL = "postgresql://user:password@host/neondb?sslmode=require"
+# NEXTAUTH_SECRET = "your_secret"
+# NEXTAUTH_URL = "https://your-site.netlify.app"
+# JWT_SECRET = "your_jwt_secret"

@@ -1,0 +1,118 @@
+[
+  {
+    "id": "user-1",
+    "username": "admin",
+    "password": "admin123",
+    "name": "Admin User",
+    "role": "admin"
+  },
+  {
+    "id": "T1",
+    "username": "TEA001",
+    "password": "password",
+    "name": "Dr. Jeet Banerjee",
+    "role": "teacher"
+  },
+  {
+    "id": "T4",
+    "username": "TEA004",
+    "password": "password",
+    "name": "Shiplu Das",
+    "role": "teacher"
+  },
+  {
+    "id": "S3",
+    "username": "AU/1015/0200494",
+    "password": "password",
+    "name": "DIVYA VERMA",
+    "role": "student"
+  },
+  {
+    "id": "S11",
+    "username": "AU/1014/1421206",
+    "password": "password",
+    "name": "NEHA YADAV",
+    "role": "student"
+  },
+  {
+    "id": "T2",
+    "username": "AU/TEA/8001642",
+    "password": "password",
+    "name": "Prof. Kavita Sharma",
+    "role": "teacher"
+  },
+  {
+    "id": "S5",
+    "username": "AU/1013/0797587",
+    "password": "password",
+    "name": "ROHAN KUMARI",
+    "role": "student"
+  },
+  {
+    "id": "user-1757747066637",
+    "username": "shramanc",
+    "password": "shramanc",
+    "name": "Admin",
+    "role": "admin"
+  },
+  {
+    "userId": "AU/TEA/4914581",
+    "name": "Dr. Priya Iyer",
+    "password": "password",
+    "role": "teacher"
+  },
+  {
+    "userId": "AU/TEA/4914582",
+    "name": "Dr. Priya Iyer",
+    "password": "password",
+    "role": "teacher"
+  },
+  {
+    "userId": "AU/TEA/49145815",
+    "name": "Dr. Priya Iyer",
+    "password": "password",
+    "role": "teacher"
+  },
+  {
+    "userId": "AU/TEA/6314124",
+    "name": "Prof. Amit Malhotra",
+    "password": "password",
+    "role": "teacher"
+  },
+  {
+    "userId": "T999",
+    "name": "Test Reg",
+    "password": "pass123",
+    "role": "teacher"
+  },
+  {
+    "userId": "AU/TEA/99999",
+    "name": "Test T",
+    "password": "pass123",
+    "role": "teacher"
+  },
+  {
+    "userId": "AU/STU/99996",
+    "name": "Test S4",
+    "password": "pass123",
+    "role": "student"
+  },
+  {
+    "userId": "stu123",
+    "name": "student 123",
+    "password": "123456",
+    "role": "student"
+  },
+  {
+    "userId": "AU/STU/99997",
+    "name": "New Student X",
+    "password": "pass123",
+    "role": "student"
+  },
+  {
+    "userId": "AU/2024/0000819",
+    "name": "Shraman C.",
+    "password": "admin123",
+    "role": "student"
+  }
+]
