@@ -286,14 +286,12 @@ npm run start
 
 ---
 
-## Contributing    1. Fork this repo and clone your fork.
-    2. Create a new branch for your feature/fix.
-    3. Make your changes and add tests if needed.
-    4. Run `npm run lint` and `npm run typecheck` to ensure code quality.
-    5. Commit and push, then open a pull request.
-
+## Contributing    
+  1. Fork this repo and clone your fork.
+  2. Create a new branch for your feature/fix.
+  3. Make your changes and add tests if needed.
+  4. Run `npm run lint` and `npm run typecheck` to ensure code quality.
+  5. Commit and push, then open a pull request.
     ---
-
-    ## License
-
-    MIT License. See [LICENSE](LICENSE) for details.
+## License
+MIT License. See [LICENSE](LICENSE) for details.
