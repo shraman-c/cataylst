@@ -283,7 +283,12 @@ For self-hosting, build the app and run:
 npm run build
 npm run start
 ```
-
+Testing out the Online version
+```bash
+goto: https://cataylst.vercel.app/login/emp-login/
+username: admin
+password: admin123
+```
 ---
 
 ## Contributing    
