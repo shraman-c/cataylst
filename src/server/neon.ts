@@ -1,22 +1,101 @@
 ﻿import { neon } from "@neondatabase/serverless";
-import dotenv from 'dotenv';
 
-// Load environment variables
-dotenv.config({ path: '.env.local' });
-dotenv.config(); // Also load .env as fallback
+type DbProvider = 'neon' | 'd1';
+
+const DB_PROVIDER = (process.env.DB_PROVIDER || 'neon').toLowerCase() as DbProvider;
 
 const DATABASE_URL = process.env.DATABASE_URL;
+const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
+const CF_D1_DATABASE_ID = process.env.CF_D1_DATABASE_ID;
+const CF_API_TOKEN = process.env.CF_API_TOKEN;
 
-if (!DATABASE_URL) {
-  throw new Error('DATABASE_URL is not defined. Please add it to your .env.local file.');
+let neonSql: ReturnType<typeof neon> | null = null;
+
+function getNeonClient(): ReturnType<typeof neon> {
+  if (!DATABASE_URL) {
+    throw new Error('DATABASE_URL is not defined. Set it in your environment when DB_PROVIDER=neon.');
+  }
+
+  if (!neonSql) {
+    neonSql = neon(DATABASE_URL);
+  }
+
+  return neonSql;
 }
 
-const sql = neon(DATABASE_URL);
+function ensureD1Env(): void {
+  if (!CF_ACCOUNT_ID || !CF_D1_DATABASE_ID || !CF_API_TOKEN) {
+    throw new Error(
+      'Missing Cloudflare D1 env vars. Required: CF_ACCOUNT_ID, CF_D1_DATABASE_ID, CF_API_TOKEN when DB_PROVIDER=d1.'
+    );
+  }
+}
 
-export async function query(text: string): Promise<any[]> {
+async function d1Query(text: string): Promise<any[]> {
+  ensureD1Env();
+
+  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/d1/database/${CF_D1_DATABASE_ID}/query`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${CF_API_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ sql: text }),
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok || !payload?.success) {
+    const errorMessage = payload?.errors?.map((e: { message?: string }) => e.message).join('; ') || 'Unknown D1 API error';
+    throw new Error(`D1 query failed: ${errorMessage}`);
+  }
+
+  return payload?.result?.[0]?.results || [];
+}
+
+function escapeSqlValue(value: any): string {
+  if (value === null || value === undefined) {
+    return 'NULL';
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? String(value) : 'NULL';
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? '1' : '0';
+  }
+
+  if (typeof value === 'object') {
+    return `'${JSON.stringify(value).replace(/'/g, "''")}'`;
+  }
+
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+function interpolateParams(text: string, params?: any[]): string {
+  if (!params || params.length === 0) {
+    return text;
+  }
+
+  return text.replace(/\$(\d+)/g, (_match, group) => {
+    const index = Number(group) - 1;
+    const value = params[index];
+    return escapeSqlValue(value);
+  });
+}
+
+export async function query(text: string, params?: any[]): Promise<any[]> {
   try {
-    // Use template literal syntax as required by Neon
-    return await sql`${sql.unsafe(text)}`;
+    const finalQuery = interpolateParams(text, params);
+
+    if (DB_PROVIDER === 'd1') {
+      return await d1Query(finalQuery);
+    }
+
+    const sql = getNeonClient();
+    return (await sql`${sql.unsafe(finalQuery)}`) as any[];
   } catch (error) {
     console.error('Database query error:', error);
     throw error;
@@ -27,7 +106,7 @@ export async function query(text: string): Promise<any[]> {
  * Get all records from a table
  */
 export async function getAll(tableName: string): Promise<any[]> {
-  return await sql`SELECT * FROM ${sql.unsafe(tableName)} ORDER BY id`;
+  return await query(`SELECT * FROM ${tableName} ORDER BY id`);
 }
 
 /**
@@ -44,17 +123,7 @@ export async function insertMany(tableName: string, data: any[]): Promise<any[]>
     
     // Build UPSERT query for courses table
     const columns = keys.join(', ');
-    const placeholders = values.map((value, index) => {
-      if (typeof value === 'string') {
-        return `'${value.replace(/'/g, "''")}'`;
-      } else if (typeof value === 'object' && value !== null) {
-        return `'${JSON.stringify(value)}'::jsonb`;
-      } else if (value === null || value === undefined) {
-        return 'NULL';
-      } else {
-        return value;
-      }
-    }).join(', ');
+    const placeholders = values.map((value) => escapeSqlValue(value)).join(', ');
     
     // Use UPSERT for tables that support it (courses and students)
     let result;
@@ -62,15 +131,7 @@ export async function insertMany(tableName: string, data: any[]): Promise<any[]>
       // Create SET clause for UPDATE part
       const updateColumns = keys.filter(k => k !== 'custom_id').map(k => {
         const value = item[k];
-        if (typeof value === 'string') {
-          return `${k} = '${value.replace(/'/g, "''")}'`;
-        } else if (typeof value === 'object' && value !== null) {
-          return `${k} = '${JSON.stringify(value)}'::jsonb`;
-        } else if (value === null || value === undefined) {
-          return `${k} = NULL`;
-        } else {
-          return `${k} = ${value}`;
-        }
+        return `${k} = ${escapeSqlValue(value)}`;
       }).join(', ');
       
       result = await query(`
@@ -121,15 +182,7 @@ export async function insert(tableName: string, data: any): Promise<any> {
   
   // Build INSERT query
   const columns = keys.join(', ');
-  const placeholders = values.map((value, index) => {
-    if (typeof value === 'string') {
-      return `'${value.replace(/'/g, "''")}'`;
-    } else if (typeof value === 'object' && value !== null) {
-      return `'${JSON.stringify(value)}'::jsonb`;
-    } else {
-      return value;
-    }
-  }).join(', ');
+  const placeholders = values.map((value) => escapeSqlValue(value)).join(', ');
   
   const result = await query(`
     INSERT INTO ${tableName} (${columns}) 
@@ -148,15 +201,7 @@ export async function update(tableName: string, id: string, data: any): Promise<
   
   const setClause = keys.map(key => {
     const value = data[key];
-    if (typeof value === 'string') {
-      return `${key} = '${value.replace(/'/g, "''")}'`;
-    } else if (typeof value === 'object' && value !== null) {
-      return `${key} = '${JSON.stringify(value)}'::jsonb`;
-    } else if (value === null || value === undefined) {
-      return `${key} = NULL`;
-    } else {
-      return `${key} = ${value}`;
-    }
+    return `${key} = ${escapeSqlValue(value)}`;
   }).join(', ');
   
   const result = await query(`
@@ -218,4 +263,4 @@ export function collections() {
   };
 }
 
-export { sql };
+export const sql = null;
