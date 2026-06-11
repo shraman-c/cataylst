@@ -1,7 +1,0 @@
-id,name,credits,classesPerWeek,isLab,semester,programId,department,isNEP,nepCourseType
-CSE12001,Advanced Programming,4,3,false,3,BTCSE,CSE,true,Major
-PHY11301,Physics Lab,2,2,true,1,BTCSE,PHY,false,
-MTH15201,Calculus II,4,4,false,2,BTCSE,MTH,true,FC
-CSE13001,Data Structures Advanced,3,3,false,4,BTCSE,CSE,true,Major
-ENG11154,Technical Communication,2,2,false,1,BTCSE,ENG,true,AEC
-CSE14001,Machine Learning,4,3,true,5,BTCSE,CSE,true,Major

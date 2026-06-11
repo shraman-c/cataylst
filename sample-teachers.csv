@@ -1,4 +1,0 @@
-id,name,teacherId,subjects,availability,department,designation
-T001,Dr. Sharma,PROF001,"CSE12001,CSE13001,CSE14001","{""Monday"":[""09:30-17:30""],""Tuesday"":[""09:30-17:30""],""Wednesday"":[""09:30-17:30""],""Thursday"":[""09:30-17:30""],""Friday"":[""09:30-17:30""]}",CSE,Professor
-T002,Prof. Kumar,PROF002,"PHY11301,MTH15201","{""Monday"":[""10:00-16:00""],""Tuesday"":[""10:00-16:00""],""Wednesday"":[""10:00-16:00""],""Thursday"":[""10:00-16:00""],""Friday"":[""10:00-16:00""]}",PHY,Associate Professor
-T003,Dr. Patel,PROF003,"ENG11154,CSE12001","{""Monday"":[""09:00-17:00""],""Tuesday"":[""09:00-17:00""],""Wednesday"":[""09:00-17:00""],""Thursday"":[""09:00-17:00""],""Friday"":[""09:00-17:00""]}",ENG,Assistant Professor

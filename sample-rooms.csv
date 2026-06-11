@@ -1,7 +1,0 @@
-id,name,capacity,isLab
-R101,Computer Lab 1,30,true
-R102,Computer Lab 2,25,true
-R201,Lecture Hall A,100,false
-R202,Lecture Hall B,80,false
-R301,Physics Lab,20,true
-R302,Seminar Room,40,false

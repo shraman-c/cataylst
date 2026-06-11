@@ -1,7 +1,0 @@
-id,name,programId,semester,capacity,currentEnrollment,isActive,roomPreference,academicYear
-SEC001,A,BTCSE,1,60,2,true,Classroom,2024-25
-SEC002,B,BTCSE,1,60,0,true,Classroom,2024-25
-SEC003,A,BTCSE,3,55,2,true,Classroom,2024-25
-SEC004,B,BTCSE,3,55,0,true,Classroom,2024-25
-SEC005,A,BTECE,2,50,1,true,Lab,2024-25
-SEC006,A,BTMECH,4,45,1,true,Classroom,2024-25
