@@ -78,7 +78,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-tl from-slate-900 via-purple-400 from-gray-900 bg-cover">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-tl from-slate-900 via-purple-400 to-gray-900 bg-cover">
        <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-2 mb-4">

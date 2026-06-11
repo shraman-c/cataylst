@@ -90,6 +90,21 @@ export type AppSessionUser = {
   authUserId?: string;
 };
 
+export async function getUserRole(authUserId: string) {
+  const supabase = createSupabaseAuthClient();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', authUserId)
+    .single();
+
+  if (error || !data) {
+    return 'student';
+  }
+
+  return data.role as AppSessionUser['role'];
+}
+
 export function mapSupabaseUserToAppUser(user: User): AppSessionUser {
   const metadata = (user.user_metadata || {}) as Record<string, unknown>;
   const role = (metadata.role as AppSessionUser['role']) || 'student';
