@@ -1,26 +1,31 @@
-﻿import { neon } from "@neondatabase/serverless";
+﻿import { Pool } from 'pg';
 
-type DbProvider = 'neon' | 'd1';
+type DbProvider = 'supabase' | 'd1';
 
-const DB_PROVIDER = (process.env.DB_PROVIDER || 'neon').toLowerCase() as DbProvider;
+const DB_PROVIDER = (process.env.DB_PROVIDER || 'supabase').toLowerCase() as DbProvider;
 
 const DATABASE_URL = process.env.DATABASE_URL;
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const CF_D1_DATABASE_ID = process.env.CF_D1_DATABASE_ID;
 const CF_API_TOKEN = process.env.CF_API_TOKEN;
 
-let neonSql: ReturnType<typeof neon> | null = null;
+let pool: Pool | null = null;
 
-function getNeonClient(): ReturnType<typeof neon> {
+function getPool(): Pool {
   if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL is not defined. Set it in your environment when DB_PROVIDER=neon.');
+    throw new Error('DATABASE_URL is not defined. Set it in your environment when DB_PROVIDER=supabase.');
   }
 
-  if (!neonSql) {
-    neonSql = neon(DATABASE_URL);
+  if (!pool) {
+    pool = new Pool({
+      connectionString: DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false,
+      },
+    });
   }
 
-  return neonSql;
+  return pool;
 }
 
 function ensureD1Env(): void {
@@ -94,8 +99,9 @@ export async function query(text: string, params?: any[]): Promise<any[]> {
       return await d1Query(finalQuery);
     }
 
-    const sql = getNeonClient();
-    return (await sql`${sql.unsafe(finalQuery)}`) as any[];
+    const poolInstance = getPool();
+    const result = await poolInstance.query(finalQuery);
+    return result.rows;
   } catch (error) {
     console.error('Database query error:', error);
     throw error;
@@ -121,14 +127,11 @@ export async function insertMany(tableName: string, data: any[]): Promise<any[]>
     const keys = Object.keys(item);
     const values = keys.map(key => item[key]);
     
-    // Build UPSERT query for courses table
     const columns = keys.join(', ');
     const placeholders = values.map((value) => escapeSqlValue(value)).join(', ');
     
-    // Use UPSERT for tables that support it (courses and students)
     let result;
     if (tableName === 'courses' || tableName === 'students') {
-      // Create SET clause for UPDATE part
       const updateColumns = keys.filter(k => k !== 'custom_id').map(k => {
         const value = item[k];
         return `${k} = ${escapeSqlValue(value)}`;
@@ -142,7 +145,6 @@ export async function insertMany(tableName: string, data: any[]): Promise<any[]>
         RETURNING *
       `);
     } else {
-      // For other tables, use simple insert
       result = await query(`
         INSERT INTO ${tableName} (${columns}) 
         VALUES (${placeholders}) 
@@ -180,7 +182,6 @@ export async function insert(tableName: string, data: any): Promise<any> {
   const keys = Object.keys(data);
   const values = keys.map(key => data[key]);
   
-  // Build INSERT query
   const columns = keys.join(', ');
   const placeholders = values.map((value) => escapeSqlValue(value)).join(', ');
   
@@ -227,7 +228,6 @@ export async function deleteOne(tableName: string, id: string): Promise<boolean>
   return result.length > 0;
 }
 
-// Supabase-compatible collections interface for easy migration
 export function collections() {
   return {
     students: {

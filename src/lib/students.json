@@ -1,38 +1,81 @@
 [
   {
-    "id": "TEST001",
-    "name": "Test Student 1",
-    "studentId": "TEST001",
-    "electives": [],
-    "credits": 0,
+    "id": "S001",
+    "name": "John Doe",
+    "studentId": "2021CSE001",
+    "electives": [
+      "CSE11001",
+      "PHY11201",
+      "MTH151"
+    ],
+    "credits": 18,
     "programId": "BTCSE",
     "currentSemester": 3,
     "enrolledCourses": [],
-    "sectionId": "SEC001",
+    "sectionId": "SEC003",
     "department": "CSE"
   },
   {
-    "id": "TEST002",
-    "name": "Test Student 2",
-    "studentId": "TEST002",
-    "electives": [],
-    "credits": 0,
+    "id": "S002",
+    "name": "Jane Smith",
+    "studentId": "2021CSE002",
+    "electives": [
+      "CSE11001",
+      "CSE101",
+      "MTH151"
+    ],
+    "credits": 17,
     "programId": "BTCSE",
+    "currentSemester": 3,
+    "enrolledCourses": [],
+    "sectionId": "SEC003",
+    "department": "CSE"
+  },
+  {
+    "id": "S003",
+    "name": "Alice Johnson",
+    "studentId": "2021ECE001",
+    "electives": [
+      "ECE11001",
+      "PHY11201",
+      "MTH151"
+    ],
+    "credits": 16,
+    "programId": "BTECE",
     "currentSemester": 2,
     "enrolledCourses": [],
-    "sectionId": "SEC001",
-    "department": "CSE"
+    "sectionId": "SEC005",
+    "department": "ECE"
   },
   {
-    "id": "TEST003",
-    "name": "Test Student 3",
-    "studentId": "TEST003",
-    "electives": [],
-    "credits": 0,
-    "programId": "BTECE",
+    "id": "S004",
+    "name": "Bob Wilson",
+    "studentId": "2021MECH001",
+    "electives": [
+      "MEE11002",
+      "PHY11201",
+      "MTH151"
+    ],
+    "credits": 20,
+    "programId": "BTMECH",
     "currentSemester": 4,
     "enrolledCourses": [],
+    "sectionId": "SEC006",
+    "department": "MECH"
+  },
+  {
+    "id": "S005",
+    "name": "Carol Brown",
+    "studentId": "2021CSE003",
+    "electives": [
+      "CSE11001",
+      "PHY11201"
+    ],
+    "credits": 10,
+    "programId": "BTCSE",
+    "currentSemester": 1,
+    "enrolledCourses": [],
     "sectionId": "SEC001",
-    "department": "ECE"
+    "department": "CSE"
   }
 ]
