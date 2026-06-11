@@ -48,11 +48,6 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof loginSchema>) {
     setIsLoading(true)
     try {
-      const studentIdPattern = /^AU\/\d{4}\/\d{7}$/;
-
-      if (studentIdPattern.test(values.username)) {
-        throw new Error("Please use a valid Employee ID to log in.");
-      }
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,7 +78,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-bl from-slate-900 via-purple-400 from-gray-900 bg-cover]">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-bl from-slate-900 via-purple-400 to-gray-900 bg-cover">
        <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-2 mb-4">
@@ -101,7 +96,7 @@ export default function LoginPage() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Employee ID</FormLabel>
+                    <FormLabel>Employee ID or Email</FormLabel>
                     <FormControl>
                       <Input placeholder="AU/TEA/•••••••" {...field} disabled={isLoading} />
                     </FormControl>

@@ -48,13 +48,6 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof loginSchema>) {
     setIsLoading(true)
     try {
-
-      const studentIdPattern = /^AU\/\d{4}\/\d{7}$/;
-
-      if (!studentIdPattern.test(values.username)) {
-        throw new Error("Please use a valid student ID to log in.");
-      }
-
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -103,7 +96,7 @@ export default function LoginPage() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Student ID</FormLabel>
+                    <FormLabel>Student ID or Email</FormLabel>
                     <FormControl>
                       <Input placeholder="AU/••••/•••••••" {...field} disabled={isLoading} />
                     </FormControl>

@@ -1,24 +1,14 @@
 import { cookies } from "next/headers"
-import { jwtVerify } from "jose"
+import { redirect } from "next/navigation"
 import ClientDashboard from "@/components/client-dashboard"
+import { SUPABASE_AUTH_COOKIE_NAMES, getAppUserFromAccessToken } from "@/lib/supabase-auth"
 
 async function getUserFromToken() {
   const cookieStore = await cookies();
-  const cookie = cookieStore.get('session_token');
+  const cookie = cookieStore.get(SUPABASE_AUTH_COOKIE_NAMES.access);
   if (!cookie) return null;
 
-  try {
-    const secret = process.env.NEXTAUTH_SECRET;
-    if (!secret) {
-        throw new Error('NEXTAUTH_SECRET is not defined in the environment variables.');
-    }
-    const key = new TextEncoder().encode(secret);
-    const { payload } = await jwtVerify(cookie.value, key);
-    return payload;
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    return null;
-  }
+  return getAppUserFromAccessToken(cookie.value);
 }
 
 export default async function DashboardLayout({
@@ -27,7 +17,10 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const user = await getUserFromToken();
-  const defaultUser = user || { userId: 'demo', role: 'admin', name: 'Demo User' };
 
-  return <ClientDashboard user={defaultUser} />;
+  if (!user) {
+    redirect('/login');
+  }
+
+  return <ClientDashboard user={user} />;
 }

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { StudentSchema, TeacherSchema } from '@/lib/data-schemas';
+import { createSupabaseAuthClient, toSupabaseEmail } from '@/lib/supabase-auth';
+import { hasRegistryAccount, readAccountRegistry, writeAccountRegistry } from '@/lib/auth-registry';
 
 // File paths
 const studentsFilePath = path.join(process.cwd(), 'src', 'lib', 'students.json');
 const teachersFilePath = path.join(process.cwd(), 'src', 'lib', 'teachers.json');
-const usersFilePath = path.join(process.cwd(), 'src', 'lib', 'users.json');
 
 // Helper functions
 async function readJsonFile(filePath: string) {
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { userType, name, password, ...restUserData } = body;
+    const registry = await readAccountRegistry();
 
     // Validation
     if (!userType || !name || !password) {
@@ -59,9 +61,6 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Hash password - temporarily disable bcrypt
-    const hashedPassword = password; // await bcrypt.hash(password, 10);
-
     if (userType === 'student') {
       // Handle student registration
       const { studentId, electives = [], credits = 0, programId, currentSemester, department, enrolledCourses = [], sectionId } = restUserData;
@@ -74,7 +73,8 @@ export async function POST(req: NextRequest) {
 
       // Read existing data
       const students = await readJsonFile(studentsFilePath);
-      const users = await readJsonFile(usersFilePath);
+      const email = toSupabaseEmail(studentId);
+      const studentDataId = generateId('S', students);
 
       // Check if student ID already exists
       if (students.some((s: any) => s.studentId === studentId)) {
@@ -84,14 +84,11 @@ export async function POST(req: NextRequest) {
       }
 
       // Check if username already exists
-      if (users.some((u: any) => u.userId === studentId)) {
+      if (hasRegistryAccount(registry, { profileId: studentDataId, username: studentId, email })) {
         return NextResponse.json({ 
           error: 'Username already exists' 
         }, { status: 400 });
       }
-
-      // Generate unique student data ID
-      const studentDataId = generateId('S', students);
 
       // Create student data (include program/semester/department if provided)
       const studentData: any = {
@@ -117,26 +114,60 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // Create user account
-      const userAccountData = {
-        userId: studentId,
-        name,
-        password: hashedPassword,
-        role: 'student'
-      };
+        const userMetadata = {
+          name,
+          role: 'student',
+          username: studentId,
+          profileId: studentDataId,
+        };
+
+        const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+          ? createSupabaseAdminClient()
+          : createSupabaseAuthClient();
+
+        const { data: authData, error: authError } = process.env.SUPABASE_SERVICE_ROLE_KEY
+          ? await supabase.auth.admin.createUser({
+              email,
+              password,
+              email_confirm: true,
+              user_metadata: userMetadata,
+            })
+          : await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                data: userMetadata,
+              },
+            });
+
+      if (authError || !authData.user) {
+        return NextResponse.json({
+          error: authError?.message || 'Failed to create Supabase user'
+        }, { status: 400 });
+      }
 
       // Save both files
       students.push(studentData);
-      users.push(userAccountData);
 
       await writeJsonFile(studentsFilePath, students);
-      await writeJsonFile(usersFilePath, users);
+      await writeAccountRegistry([
+        ...registry,
+        {
+          id: studentDataId,
+          profileId: studentDataId,
+          authUserId: authData.user.id,
+          username: studentId,
+          email,
+          name,
+          role: 'student',
+        },
+      ]);
 
       return NextResponse.json({ 
         success: true, 
         message: 'Student registered successfully',
         student: studentData,
-        user: { ...userAccountData, password: undefined }
+        user: { id: studentDataId, username: studentId, name, role: 'student' }
       });
 
     } else if (userType === 'teacher') {
@@ -161,7 +192,7 @@ export async function POST(req: NextRequest) {
 
       // Read existing data
       const teachers = await readJsonFile(teachersFilePath);
-      const users = await readJsonFile(usersFilePath);
+      const email = toSupabaseEmail(teacherId);
 
       // Check if teacher ID already exists
       if (teachers.some((t: any) => t.teacherId === teacherId)) {
@@ -171,7 +202,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Check if username already exists
-      if (users.some((u: any) => u.userId === teacherId)) {
+      if (hasRegistryAccount(registry, { profileId: teacherId, username: teacherId, email })) {
         return NextResponse.json({ 
           error: 'Username already exists' 
         }, { status: 400 });
@@ -208,26 +239,60 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
-      // Create user account
-      const userAccountData = {
-        userId: teacherId,
-        name,
-        password: hashedPassword,
-        role: 'teacher'
-      };
+        const userMetadata = {
+          name,
+          role: 'teacher',
+          username: teacherId,
+          profileId: teacherId,
+        };
+
+        const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+          ? createSupabaseAdminClient()
+          : createSupabaseAuthClient();
+
+        const { data: authData, error: authError } = process.env.SUPABASE_SERVICE_ROLE_KEY
+          ? await supabase.auth.admin.createUser({
+              email,
+              password,
+              email_confirm: true,
+              user_metadata: userMetadata,
+            })
+          : await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                data: userMetadata,
+              },
+            });
+
+      if (authError || !authData.user) {
+        return NextResponse.json({
+          error: authError?.message || 'Failed to create Supabase user'
+        }, { status: 400 });
+      }
 
       // Save both files
       teachers.push(teacherData);
-      users.push(userAccountData);
 
       await writeJsonFile(teachersFilePath, teachers);
-      await writeJsonFile(usersFilePath, users);
+      await writeAccountRegistry([
+        ...registry,
+        {
+          id: teacherId,
+          profileId: teacherId,
+          authUserId: authData.user.id,
+          username: teacherId,
+          email,
+          name,
+          role: 'teacher',
+        },
+      ]);
 
       return NextResponse.json({ 
         success: true, 
         message: 'Teacher registered successfully',
         teacher: teacherData,
-        user: { ...userAccountData, password: undefined }
+        user: { id: teacherId, username: teacherId, name, role: 'teacher' }
       });
     }
 

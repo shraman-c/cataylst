@@ -3,31 +3,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
-
-
-
 import { StudentSchema, TeacherSchema } from '@/lib/data-schemas';
+import { readAccountRegistry, writeAccountRegistry, hasRegistryAccount } from '@/lib/auth-registry';
+import { createSupabaseAuthClient, toSupabaseEmail } from '@/lib/supabase-auth';
 
-// Define the path to the users.json file
-const usersFilePath = path.join(process.cwd(), 'src', 'lib', 'users.json');
 const studentsFilePath = path.join(process.cwd(), 'src', 'lib', 'students.json');
 const teachersFilePath = path.join(process.cwd(), 'src', 'lib', 'teachers.json');
 
-
 async function getJSONData(filePath: string) {
-    try {
-        const data = await fs.readFile(filePath, 'utf-8');
-        return JSON.parse(data);
-    } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-            return []; // If the file doesn't exist, return an empty array
-        }
-        throw error;
-    }
-}
-
-async function saveUsers(users: any) {
-  await fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), 'utf-8');
+  try {
+    const data = await fs.readFile(filePath, 'utf-8');
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return []; // If the file doesn't exist, return an empty array
+    import { createSupabaseAdminClient, createSupabaseAuthClient, toSupabaseEmail } from '@/lib/supabase-auth';
+    throw error;
+  }
 }
 
 
@@ -48,49 +41,89 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
 
-    const users = await getJSONData(usersFilePath);
     const allStudents = await getJSONData(studentsFilePath);
     const allTeachers = await getJSONData(teachersFilePath);
+    const registry = await readAccountRegistry();
 
     let selectedUser: any;
     let username: string;
     let name: string;
+    let profileId: string;
 
     if (role === 'student') {
         selectedUser = allStudents.find((s: any) => s.id === userId);
         if (!selectedUser) return NextResponse.json({ error: 'Selected student not found' }, { status: 404 });
         username = selectedUser.studentId;
         name = selectedUser.name;
+        profileId = selectedUser.id;
     } else if (role === 'teacher') {
         selectedUser = allTeachers.find((t: any) => t.id === userId);
         if (!selectedUser) return NextResponse.json({ error: 'Selected teacher not found' }, { status: 404 });
         username = selectedUser.teacherId;
         name = selectedUser.name;
+        profileId = selectedUser.id;
     } else { // admin
         username = userId; // For admin, userId is the username
         name = 'Admin';
+        profileId = userId;
     }
 
-
-    const existingUser = users.find((u: any) => u.username === username);
-    if (existingUser) {
+    const email = toSupabaseEmail(username);
+    if (hasRegistryAccount(registry, { profileId, username, email })) {
       return NextResponse.json({ error: 'User account already exists for this ID' }, { status: 409 });
     }
 
-    const newUser = {
-      id: selectedUser ? selectedUser.id : `user-${Date.now()}`,
-      username,
-      password: password, // Storing plain text password as requested
-      name,
-      role,
-    };
-    
-    users.push(newUser);
-    await saveUsers(users);
+    const supabase = createSupabaseAuthClient();
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          role,
+          username,
+          profileId,
+        },
+      },
+    });
 
+    if (error || !data.user) {
+      return NextResponse.json({ error: error?.message || 'Failed to create Supabase user' }, { status: 400 });
+    }
 
-    return NextResponse.json({ success: true, userId: newUser.id }, { status: 201 });
+    await writeAccountRegistry([
+      ...registry,
+      {
+        id: profileId,
+        profileId,
+        const authPayload = {
+          email,
+          password,
+        };
 
+        const userMetadata = {
+          name,
+          role,
+          username,
+          profileId,
+        };
+
+        const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+          ? createSupabaseAdminClient()
+          : createSupabaseAuthClient();
+
+        const { data, error } = process.env.SUPABASE_SERVICE_ROLE_KEY
+          ? await supabase.auth.admin.createUser({
+              ...authPayload,
+              email_confirm: true,
+              user_metadata: userMetadata,
+            })
+          : await supabase.auth.signUp({
+              ...authPayload,
+              options: {
+                data: userMetadata,
+              },
+            });
   } catch (err: any) {
     console.error("Registration Error:", err);
     return NextResponse.json({ error: 'An error occurred during registration.' }, { status: 500 });
@@ -99,14 +132,16 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     try {
-        const users = await getJSONData(usersFilePath);
         const students = await getJSONData(studentsFilePath);
         const teachers = await getJSONData(teachersFilePath);
+        const registry = await readAccountRegistry();
 
-        const userIdsWithAccounts = new Set(users.map((u: any) => u.id));
+        const userIdsWithAccounts = new Set(
+          registry.flatMap((entry) => [entry.id, entry.profileId, entry.username, entry.email].filter(Boolean).map(String))
+        );
         
-        const availableStudents = students.filter((s: any) => !userIdsWithAccounts.has(s.id));
-        const availableTeachers = teachers.filter((t: any) => !userIdsWithAccounts.has(t.id));
+        const availableStudents = students.filter((s: any) => !userIdsWithAccounts.has(s.id) && !userIdsWithAccounts.has(s.studentId));
+        const availableTeachers = teachers.filter((t: any) => !userIdsWithAccounts.has(t.id) && !userIdsWithAccounts.has(t.teacherId));
 
         return NextResponse.json({ students: availableStudents, teachers: availableTeachers });
 

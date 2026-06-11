@@ -1,29 +1,33 @@
 
 import { NextResponse, type NextRequest } from 'next/server'
+import { SUPABASE_AUTH_COOKIE_NAMES, clearSupabaseAuthCookies, getAppUserFromAccessToken } from '@/lib/supabase-auth'
 
-export function middleware(request: NextRequest) {
-  const sessionToken = request.cookies.get('session_token');
+export async function middleware(request: NextRequest) {
+  const accessToken = request.cookies.get(SUPABASE_AUTH_COOKIE_NAMES.access)?.value;
+  const isDashboardRoute = request.nextUrl.pathname.startsWith('/dashboard');
+  const isLoginRoute = request.nextUrl.pathname.startsWith('/login');
 
-  // Allow dashboard access without authentication for development
-  // Remove this comment and uncomment the redirect if you want to enforce authentication
-  /*
-  if (!sessionToken?.value) {
-    if(request.nextUrl.pathname.startsWith('/dashboard')) {
-       return NextResponse.redirect(new URL('/', request.url))
+  if (!accessToken) {
+    if (isDashboardRoute) {
+      return NextResponse.redirect(new URL('/login', request.url));
     }
-  } else {
-      if(request.nextUrl.pathname.startsWith('/login')) {
-         return NextResponse.redirect(new URL('/dashboard', request.url))
-      }
-  }
-  */
 
-  // Only redirect from login to dashboard if user is authenticated
-  if (sessionToken?.value && request.nextUrl.pathname.startsWith('/login')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return NextResponse.next();
   }
 
-  return NextResponse.next()
+  const user = await getAppUserFromAccessToken(accessToken);
+
+  if (!user) {
+    const response = isDashboardRoute ? NextResponse.redirect(new URL('/login', request.url)) : NextResponse.next();
+    clearSupabaseAuthCookies(response);
+    return response;
+  }
+
+  if (isLoginRoute) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
