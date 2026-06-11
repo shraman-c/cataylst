@@ -14,6 +14,7 @@ Catalyst is a modern, full-stack web application for generating, visualizing, an
 - **Manual Edits:** Admins can manually adjust slots and resolve conflicts.
 - **Modern UI:** Built with Next.js, Tailwind, and Radix UI for a clean, responsive experience.
 - **Supabase Backend:** All data is stored in a Supabase PostgreSQL database.
+- **Custom Auth System:** Secure bcrypt password hashing and JWT session management.
 - **Genkit AI Flows:** LLM-powered summaries and reasoning for timetable explanations.
 
 ---
@@ -22,8 +23,9 @@ Catalyst is a modern, full-stack web application for generating, visualizing, an
 
 - **Frontend:** Next.js 15, React 18, Tailwind CSS, Radix UI, TypeScript
 - **Backend:** Next.js API routes, Supabase (PostgreSQL), `pg` driver, Zod validation
+- **Auth:** Custom bcrypt + JWT implementation
 - **AI/ML:** Custom genetic algorithm, Genkit LLM flows
-- **Other:** PapaParse (CSV), jose (JWT)
+- **Other:** PapaParse (CSV), jsonwebtoken
 
 ---
 
@@ -40,8 +42,8 @@ src/
   lib/                # Shared logic (types, schemas, utils, genetic algorithm)
   server/             # Supabase connection and helpers (using pg pool)
   ai/                 # Genkit LLM flows and dev scripts
-docs/                 # Project blueprints and documentation
-public/               # Static assets (images, favicon)
+  docs/                 # Project blueprints and documentation
+  public/               # Static assets (images, favicon)
 .env                  # Environment variables
 ```
 
@@ -49,35 +51,12 @@ public/               # Static assets (images, favicon)
 
 ## Setup & Running Locally
 
-1. **Install dependencies:**
-    ```bash
-    npm install
-    ```
+For detailed installation and database setup instructions, please refer to the **[Setup Guide](setup.md)**.
 
-2. **Configure environment:**
-    Create a `.env` file and fill in the following required variables:
-    - `DATABASE_URL`: Your Supabase connection string (URI) from Project Settings > Database. 
-      *Note: Use the **Transaction Pooler** string (port 6543) for best compatibility.*
-    - `DB_PROVIDER`: Set to `supabase`
-    - `NEXTAUTH_SECRET`: A random 32-character string (generate with `openssl rand -base64 32`)
-    - `NEXTAUTH_URL`: `http://localhost:9002`
-
-3. **Set up Supabase database:**
-    - Create a new Supabase project at https://supabase.com
-    - Run `create-database-schema.sql` in the Supabase SQL editor to create tables.
-    - Run any necessary patches (e.g., adding `sections` table and `department` column to students).
-
-4. **Run the Next.js app:**
-    ```bash
-    npm run dev
-    # App runs at http://localhost:9002
-    ```
-
-5. **Build for production:**
-    ```bash
-    npm run build
-    npm run start
-    ```
+**Quick Start:**
+1. Install dependencies: `npm install`
+2. Configure `.env` as per `setup.md`.
+3. Run the app: `npm run dev` (runs at `http://localhost:9002`)
 
 ---
 
@@ -85,7 +64,10 @@ public/               # Static assets (images, favicon)
 
 - `DATABASE_URL`
 - `DB_PROVIDER`
-- `NEXTAUTH_SECRET`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `JWT_SECRET`
 - `NEXTAUTH_URL`
 
 ---
@@ -108,7 +90,7 @@ public/               # Static assets (images, favicon)
 
 - **API routes** handle CRUD for all entities and timetable generation.
 - **Genetic algorithm** (see `src/lib/genetic-algorithm.ts`) creates optimal timetables.
-- **Supabase (PostgreSQL)** stores all data via a connection pool managed in `src/server/neon.ts`.
+- **Supabase (PostgreSQL)** stores all data via a connection pool.
 - **JWT-based auth** for secure login and session management.
 - **LLM/Genkit** (optional) for advanced summaries and explanations.
 
@@ -118,7 +100,7 @@ public/               # Static assets (images, favicon)
 
 ### Deploy to Netlify / Vercel
 1. Connect your repository to the platform.
-2. Set the environment variables (`DATABASE_URL`, `DB_PROVIDER`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`) in the platform's dashboard.
+2. Set the environment variables in the platform's dashboard.
 3. Use build command: `npm run build` and publish directory: `.next`.
 
 ---
@@ -133,4 +115,5 @@ public/               # Static assets (images, favicon)
 ---
 ## License
 MIT License. See [LICENSE](LICENSE) for details.
+
 
