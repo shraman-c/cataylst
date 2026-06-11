@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase-client'
 import { cookies } from 'next/headers'
-import jwt from 'jsonwebtoken'
+import { jwtVerify } from 'jose'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret-key';
+const secret = new TextEncoder().encode(JWT_SECRET);
 
 export async function middleware(request: NextRequest) {
   const cookieStore = await cookies();
@@ -12,7 +13,8 @@ export async function middleware(request: NextRequest) {
   let user = null;
   if (token) {
     try {
-      user = jwt.verify(token, JWT_SECRET) as any;
+      const { payload } = await jwtVerify(token, secret);
+      user = payload;
     } catch (e) {
       console.error("JWT verification failed:", e);
     }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-client';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret-key';
@@ -38,16 +38,17 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('Password verified successfully. Issuing JWT...');
-    // Generate JWT session token
-    const token = jwt.sign(
-      { 
+    
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const token = await new SignJWT({ 
         id: user.id, 
         username: user.username, 
         role: user.role 
-      }, 
-      JWT_SECRET, 
-      { expiresIn: '7d' }
-    );
+      })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('7d')
+      .sign(secret);
 
     const cookieStore = await cookies();
     cookieStore.set('auth-token', {
