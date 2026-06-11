@@ -51,6 +51,7 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(values),
       });
 
@@ -64,8 +65,7 @@ export default function LoginPage() {
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       })
-      // Hard redirect to ensure middleware is triggered
-      window.location.href = "/dashboard";
+      router.replace("/dashboard");
     } catch (error: any) {
       toast({
         variant: "destructive",

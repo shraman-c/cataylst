@@ -29,6 +29,7 @@ const UserRegistrationDialog = ({ onUpdated }: { onUpdated: () => void }) => {
   const [localFormData, setLocalFormData] = React.useState<any>({
     name: '',
     password: '',
+    adminUserId: '',
     studentId: '',
     teacherId: '',
     department: '',
@@ -43,14 +44,14 @@ const UserRegistrationDialog = ({ onUpdated }: { onUpdated: () => void }) => {
   // Note: using local state instead of global variables
 
   const resetForm = () => setLocalFormData({
-    name: '', password: '', studentId: '', teacherId: '', department: '', selectedElectives: [], subjects: [], designation: '', availability: {}, programId: '', currentSemester: 1
+    name: '', password: '', adminUserId: '', studentId: '', teacherId: '', department: '', selectedElectives: [], subjects: [], designation: '', availability: {}, programId: '', currentSemester: 1
   });
   
   // Use local form data
   const formData = localFormData;
   const setFormData = setLocalFormData;
 
-  const [regUserType, setRegUserType] = React.useState<'student' | 'teacher'>('student');
+  const [regUserType, setRegUserType] = React.useState<'student' | 'teacher' | 'admin'>('student');
 
   const availableDepartments: Department[] = [];
   const availableCourses: Course[] = [];
@@ -136,30 +137,38 @@ const UserRegistrationDialog = ({ onUpdated }: { onUpdated: () => void }) => {
   const handleSubmit = async () => {
     setWorking(true);
     try {
-      const payload = {
-        userType: regUserType,
-        name: formData.name,
-        password: formData.password,
-        department: formData.department,
-        ...(regUserType === 'student' ? {
-          studentId: formData.studentId,
-          electives: formData.selectedElectives,
-          credits: calculateTotalCredits(),
-          programId: formData.programId,
-          currentSemester: formData.currentSemester
-        } : {
-          teacherId: formData.teacherId,
-          subjects: formData.subjects,
-          designation: formData.designation,
-          availability: formData.availability
-        })
-      };
+      const isAdmin = regUserType === 'admin';
+      const payload = isAdmin
+        ? {
+            userId: formData.adminUserId,
+            password: formData.password,
+            role: 'admin',
+          }
+        : {
+            userType: regUserType,
+            name: formData.name,
+            password: formData.password,
+            department: formData.department,
+            ...(regUserType === 'student' ? {
+              studentId: formData.studentId,
+              electives: formData.selectedElectives,
+              credits: calculateTotalCredits(),
+              programId: formData.programId,
+              currentSemester: formData.currentSemester
+            } : {
+              teacherId: formData.teacherId,
+              subjects: formData.subjects,
+              designation: formData.designation,
+              availability: formData.availability
+            })
+          };
 
-      const res = await fetch('/api/auth/register-new', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const endpoint = isAdmin ? '/api/auth/register' : '/api/auth/register-new';
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Registration failed');
 
-      toast({ title: 'Registration Successful', description: `${regUserType === 'student' ? 'Student' : 'Teacher'} ${formData.name} has been registered successfully` });
+      toast({ title: 'Registration Successful', description: `${regUserType === 'student' ? 'Student' : regUserType === 'teacher' ? 'Teacher' : 'Admin'} ${regUserType === 'admin' ? formData.adminUserId : formData.name} has been registered successfully` });
       onUpdated(); setOpen(false); resetForm();
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Registration Failed', description: getErrorMessage(e) });
@@ -186,11 +195,29 @@ const UserRegistrationDialog = ({ onUpdated }: { onUpdated: () => void }) => {
               <SelectContent>
                 <SelectItem value="student">Student</SelectItem>
                 <SelectItem value="teacher">Teacher</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {regUserType === 'student' ? (
+          {regUserType === 'admin' ? (
+            <div className="space-y-6 max-w-2xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm">Admin Name *</Label>
+                  <Input value={formData.name} onChange={(e) => setFormData((p: any) => ({ ...p, name: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-sm">Password *</Label>
+                  <Input type="password" value={formData.password} onChange={(e) => setFormData((p: any) => ({ ...p, password: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm">Admin Username *</Label>
+                <Input value={formData.adminUserId} onChange={(e) => setFormData((p: any) => ({ ...p, adminUserId: e.target.value }))} placeholder="admin" />
+              </div>
+            </div>
+          ) : regUserType === 'student' ? (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -1350,7 +1377,7 @@ function DataManagementTable({ type, data, requestRefresh, programs, departments
             description: `Successfully imported ${result.importedCount} ${type}.`,
           });
           // For bulk uploads, refresh immediately to show new data
-          requestRefresh(`bulk-upload-${type}`);
+          requestRefresh();
         } catch (error: any) {
           toast({
             variant: "destructive",

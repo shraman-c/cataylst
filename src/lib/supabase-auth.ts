@@ -1,4 +1,5 @@
 import { createClient, type Session, type User } from '@supabase/supabase-js';
+import { decodeJwt } from 'jose';
 import { NextResponse } from 'next/server';
 
 export const SUPABASE_AUTH_COOKIE_NAMES = {
@@ -110,14 +111,28 @@ export function mapSupabaseUserToAppUser(user: User): AppSessionUser {
 }
 
 export async function getAppUserFromAccessToken(accessToken: string) {
-  const supabase = createSupabaseAuthClient();
-  const { data, error } = await supabase.auth.getUser(accessToken);
+  try {
+    const payload = decodeJwt(accessToken) as Record<string, unknown>;
+    const metadata = (payload.user_metadata || {}) as Record<string, unknown>;
+    const role = (metadata.role as AppSessionUser['role']) || (payload.role as AppSessionUser['role']) || 'student';
+    const name = (metadata.name as string) || (payload.name as string) || 'User';
+    const userId =
+      (metadata.profileId as string) ||
+      (metadata.userId as string) ||
+      (metadata.username as string) ||
+      (payload.sub as string) ||
+      'user';
 
-  if (error || !data.user) {
+    return {
+      userId,
+      name,
+      role,
+      email: (payload.email as string) || undefined,
+      authUserId: (payload.sub as string) || undefined,
+    };
+  } catch {
     return null;
   }
-
-  return mapSupabaseUserToAppUser(data.user);
 }
 
 export function setSupabaseAuthCookies(response: NextResponse, session: Session) {

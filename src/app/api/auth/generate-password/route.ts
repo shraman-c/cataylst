@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { readAccountRegistry } from '@/lib/auth-registry';
+import { createSupabaseAdminClient } from '@/lib/supabase-auth';
 
 // Schema for password generation request
 const GeneratePasswordSchema = z.object({
@@ -29,17 +31,30 @@ export async function POST(request: NextRequest) {
     }
 
     const { userId, userType, newPassword } = validation.data;
-    
-    // Generate random password if not provided
+
     const generatedPassword = newPassword || generateRandomPassword();
-    
-    // In a real app, you would:
-    // 1. Verify the user exists
-    // 2. Hash the password
-    // 3. Update the user's password in the database
-    // 4. Log the password change event
-    
-    // For now, just return success with the generated password
+    const registry = await readAccountRegistry();
+    const account = registry.find((entry) => {
+      if (userType === 'admin') {
+        return entry.role === 'admin' && (entry.id === userId || entry.profileId === userId || entry.username === userId || entry.email === userId);
+      }
+
+      return entry.role === userType && (entry.id === userId || entry.profileId === userId || entry.username === userId || entry.email === userId);
+    });
+
+    if (!account?.authUserId) {
+      return NextResponse.json({ error: 'User account not found' }, { status: 404 });
+    }
+
+    const supabase = createSupabaseAdminClient();
+    const { error } = await supabase.auth.admin.updateUserById(account.authUserId, {
+      password: generatedPassword,
+    });
+
+    if (error) {
+      return NextResponse.json({ error: error.message || 'Failed to update password' }, { status: 400 });
+    }
+
     return NextResponse.json({
       success: true,
       userId,
@@ -70,25 +85,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // In a real app, you would search the database for users
-    // For now, return mock data based on the current system
-    const mockUsers = [
-      // Students
-      { id: 'S001', name: 'John Doe', type: 'student', email: 'john.doe@student.edu', department: 'CSE' },
-      { id: 'S002', name: 'Jane Smith', type: 'student', email: 'jane.smith@student.edu', department: 'ECE' },
-      { id: 'S003', name: 'Mike Johnson', type: 'student', email: 'mike.johnson@student.edu', department: 'MECH' },
-      
-      // Teachers
-      { id: 'T001', name: 'Dr. Alice Johnson', type: 'teacher', email: 'alice.johnson@faculty.edu', department: 'CSE' },
-      { id: 'T002', name: 'Prof. Bob Wilson', type: 'teacher', email: 'bob.wilson@faculty.edu', department: 'ECE' },
-      { id: 'T003', name: 'Dr. Carol Brown', type: 'teacher', email: 'carol.brown@faculty.edu', department: 'Mathematics' },
-      
-      // Admins
-      { id: 'A001', name: 'Admin User', type: 'admin', email: 'admin@university.edu', department: 'Administration' },
-    ];
-
-    // Filter users based on search term and type
-    let filteredUsers = mockUsers;
+    const registry = await readAccountRegistry();
+    let filteredUsers = registry.map((entry) => ({
+      id: entry.profileId || entry.id || entry.username || entry.email || '',
+      name: entry.name || '',
+      type: entry.role || 'student',
+      email: entry.email || '',
+      department: '',
+    }));
     
     if (userType !== 'all') {
       filteredUsers = filteredUsers.filter(user => user.type === userType);
