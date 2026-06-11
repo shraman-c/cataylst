@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { StudentSchema, TeacherSchema } from '@/lib/data-schemas';
-import { createSupabaseAuthClient, toSupabaseEmail } from '@/lib/supabase-auth';
+import { createSupabaseAdminClient, createSupabaseAuthClient, toSupabaseEmail } from '@/lib/supabase-auth';
 import { hasRegistryAccount, readAccountRegistry, writeAccountRegistry } from '@/lib/auth-registry';
 
 // File paths

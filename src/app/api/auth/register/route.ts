@@ -1,11 +1,9 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
-import { StudentSchema, TeacherSchema } from '@/lib/data-schemas';
 import { readAccountRegistry, writeAccountRegistry, hasRegistryAccount } from '@/lib/auth-registry';
-import { createSupabaseAuthClient, toSupabaseEmail } from '@/lib/supabase-auth';
+import { createSupabaseAdminClient, createSupabaseAuthClient, toSupabaseEmail } from '@/lib/supabase-auth';
 
 const studentsFilePath = path.join(process.cwd(), 'src', 'lib', 'students.json');
 const teachersFilePath = path.join(process.cwd(), 'src', 'lib', 'teachers.json');
@@ -17,55 +15,83 @@ async function getJSONData(filePath: string) {
     return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return []; // If the file doesn't exist, return an empty array
-    import { createSupabaseAdminClient, createSupabaseAuthClient, toSupabaseEmail } from '@/lib/supabase-auth';
+      return [];
+    }
     throw error;
   }
 }
 
+async function createSupabaseAccount(args: {
+  email: string;
+  password: string;
+  metadata: Record<string, string>;
+}) {
+  const useAdminClient = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const supabase = useAdminClient ? createSupabaseAdminClient() : createSupabaseAuthClient();
+
+  if (useAdminClient) {
+    return supabase.auth.admin.createUser({
+      email: args.email,
+      password: args.password,
+      email_confirm: true,
+      user_metadata: args.metadata,
+    });
+  }
+
+  return supabase.auth.signUp({
+    email: args.email,
+    password: args.password,
+    options: {
+      data: args.metadata,
+    },
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
-    let body;
+    let body: any;
     try {
-        body = await req.json();
-    } catch(e) {
-        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
+
     const { userId, password, role } = body;
 
     if (!userId || !password || !role) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
     }
-     if (password.length < 6) {
-        return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+
+    if (password.length < 6) {
+      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
 
     const allStudents = await getJSONData(studentsFilePath);
     const allTeachers = await getJSONData(teachersFilePath);
     const registry = await readAccountRegistry();
 
-    let selectedUser: any;
     let username: string;
     let name: string;
     let profileId: string;
 
     if (role === 'student') {
-        selectedUser = allStudents.find((s: any) => s.id === userId);
-        if (!selectedUser) return NextResponse.json({ error: 'Selected student not found' }, { status: 404 });
-        username = selectedUser.studentId;
-        name = selectedUser.name;
-        profileId = selectedUser.id;
+      const selectedStudent = allStudents.find((student: any) => student.id === userId);
+      if (!selectedStudent) return NextResponse.json({ error: 'Selected student not found' }, { status: 404 });
+
+      username = selectedStudent.studentId;
+      name = selectedStudent.name;
+      profileId = selectedStudent.id;
     } else if (role === 'teacher') {
-        selectedUser = allTeachers.find((t: any) => t.id === userId);
-        if (!selectedUser) return NextResponse.json({ error: 'Selected teacher not found' }, { status: 404 });
-        username = selectedUser.teacherId;
-        name = selectedUser.name;
-        profileId = selectedUser.id;
-    } else { // admin
-        username = userId; // For admin, userId is the username
-        name = 'Admin';
-        profileId = userId;
+      const selectedTeacher = allTeachers.find((teacher: any) => teacher.id === userId);
+      if (!selectedTeacher) return NextResponse.json({ error: 'Selected teacher not found' }, { status: 404 });
+
+      username = selectedTeacher.teacherId;
+      name = selectedTeacher.name;
+      profileId = selectedTeacher.id;
+    } else {
+      username = userId;
+      name = 'Admin';
+      profileId = userId;
     }
 
     const email = toSupabaseEmail(username);
@@ -73,18 +99,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User account already exists for this ID' }, { status: 409 });
     }
 
-    const supabase = createSupabaseAuthClient();
-    const { data, error } = await supabase.auth.signUp({
+    const metadata = {
+      name,
+      role,
+      username,
+      profileId,
+    };
+
+    const { data, error } = await createSupabaseAccount({
       email,
       password,
-      options: {
-        data: {
-          name,
-          role,
-          username,
-          profileId,
-        },
-      },
+      metadata,
     });
 
     if (error || !data.user) {
@@ -96,57 +121,37 @@ export async function POST(req: NextRequest) {
       {
         id: profileId,
         profileId,
-        const authPayload = {
-          email,
-          password,
-        };
+        authUserId: data.user.id,
+        username,
+        email,
+        name,
+        role,
+      },
+    ]);
 
-        const userMetadata = {
-          name,
-          role,
-          username,
-          profileId,
-        };
-
-        const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
-          ? createSupabaseAdminClient()
-          : createSupabaseAuthClient();
-
-        const { data, error } = process.env.SUPABASE_SERVICE_ROLE_KEY
-          ? await supabase.auth.admin.createUser({
-              ...authPayload,
-              email_confirm: true,
-              user_metadata: userMetadata,
-            })
-          : await supabase.auth.signUp({
-              ...authPayload,
-              options: {
-                data: userMetadata,
-              },
-            });
+    return NextResponse.json({ success: true, userId: profileId }, { status: 201 });
   } catch (err: any) {
-    console.error("Registration Error:", err);
-    return NextResponse.json({ error: 'An error occurred during registration.' }, { status: 500 });
+    console.error('Registration Error:', err);
+    return NextResponse.json({ error: err.message || 'An error occurred during registration.' }, { status: 500 });
   }
 }
 
-export async function GET(req: NextRequest) {
-    try {
-        const students = await getJSONData(studentsFilePath);
-        const teachers = await getJSONData(teachersFilePath);
-        const registry = await readAccountRegistry();
+export async function GET() {
+  try {
+    const students = await getJSONData(studentsFilePath);
+    const teachers = await getJSONData(teachersFilePath);
+    const registry = await readAccountRegistry();
 
-        const userIdsWithAccounts = new Set(
-          registry.flatMap((entry) => [entry.id, entry.profileId, entry.username, entry.email].filter(Boolean).map(String))
-        );
-        
-        const availableStudents = students.filter((s: any) => !userIdsWithAccounts.has(s.id) && !userIdsWithAccounts.has(s.studentId));
-        const availableTeachers = teachers.filter((t: any) => !userIdsWithAccounts.has(t.id) && !userIdsWithAccounts.has(t.teacherId));
+    const userIdsWithAccounts = new Set(
+      registry.flatMap((entry) => [entry.id, entry.profileId, entry.username, entry.email].filter(Boolean).map(String))
+    );
 
-        return NextResponse.json({ students: availableStudents, teachers: availableTeachers });
+    const availableStudents = students.filter((student: any) => !userIdsWithAccounts.has(student.id) && !userIdsWithAccounts.has(student.studentId));
+    const availableTeachers = teachers.filter((teacher: any) => !userIdsWithAccounts.has(teacher.id) && !userIdsWithAccounts.has(teacher.teacherId));
 
-    } catch(err: any) {
-        console.error("Failed to get available users:", err);
-        return NextResponse.json({ error: 'Failed to fetch available users' }, { status: 500 });
-    }
+    return NextResponse.json({ students: availableStudents, teachers: availableTeachers });
+  } catch (err: any) {
+    console.error('Failed to get available users:', err);
+    return NextResponse.json({ error: 'Failed to fetch available users' }, { status: 500 });
+  }
 }
